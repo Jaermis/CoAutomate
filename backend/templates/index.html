@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CoAutomate – Automated Certificate of Attendance Report Generator for Faculty." />
+  <title>CoAutomate – Automated CoA Report System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/static/img/logo.png" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     Toast Container
+════════════════════════════════════ -->
+<div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+<!-- ════════════════════════════════════
+     LOGIN PAGE
+════════════════════════════════════ -->
+<div id="login-page" class="page">
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img class="auth-logo-icon" src="/static/img/logo.png" alt="CoAutomate Logo" />
+        <div class="auth-logo-text">CoAutomate</div>
+      </div>
+      <h1 class="auth-title">Welcome back</h1>
+      <p class="auth-subtitle">Sign in to your account to manage your CoA reports.</p>
+
+      <form id="login-form" novalidate>
+        <div class="form-group">
+          <label for="login-email" class="form-label">Email Address</label>
+          <input id="login-email" type="email" class="form-input"
+                 placeholder="you@university.edu.ph" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="login-password" class="form-label">Password</label>
+          <input id="login-password" type="password" class="form-input"
+                 placeholder="Your password" required autocomplete="current-password" />
+        </div>
+        <button id="login-btn" type="submit" class="btn btn-primary btn-block" style="margin-top:8px;">
+          Sign In
+        </button>
+      </form>
+
+      <div class="auth-switch">
+        Don't have an account?
+        <a href="#" id="go-register">Create one →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     REGISTER PAGE
+════════════════════════════════════ -->
+<div id="register-page" class="page">
+  <div class="auth-wrapper">
+    <div class="auth-card" style="max-width:560px;">
+      <div class="auth-logo">
+        <img class="auth-logo-icon" src="/static/img/logo.png" alt="CoAutomate Logo" />
+        <div class="auth-logo-text">CoAutomate</div>
+      </div>
+      <h1 class="auth-title">Create your account</h1>
+      <p class="auth-subtitle">Enter your faculty details to get started.</p>
+
+      <form id="register-form" novalidate>
+        <div class="form-group">
+          <label for="reg-fullname" class="form-label">Full Name</label>
+          <input id="reg-fullname" type="text" class="form-input"
+                 placeholder="Juan Dela Cruz" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-dept" class="form-label">Department</label>
+            <input id="reg-dept" type="text" class="form-input"
+                   placeholder="CPE" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-college" class="form-label">College</label>
+            <input id="reg-college" type="text" class="form-input"
+                   placeholder="CEA" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-load" class="form-label">Total Teaching Load (units)</label>
+            <input id="reg-load" type="number" class="form-input"
+                   placeholder="24" min="1" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-term" class="form-label">Term / School Year</label>
+            <input id="reg-term" type="text" class="form-input"
+                   placeholder="AY 2526 1ST SEM" required />
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="form-group">
+          <label for="reg-email" class="form-label">Email Address</label>
+          <input id="reg-email" type="email" class="form-input"
+                 placeholder="you@university.edu.ph" required />
+        </div>
+        <div class="form-group">
+          <label for="reg-password" class="form-label">Password</label>
+          <input id="reg-password" type="password" class="form-input"
+                 placeholder="Choose a strong password" required minlength="6" />
+        </div>
+        <button id="register-btn" type="submit" class="btn btn-primary btn-block" style="margin-top:8px;">
+          Create Account
+        </button>
+      </form>
+
+      <div class="auth-switch">
+        Already have an account?
+        <a href="#" id="go-login">Sign in →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     DASHBOARD PAGE
+════════════════════════════════════ -->
+<div id="dashboard-page" class="page">
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <img class="navbar-brand-icon" src="/static/img/logo.png" alt="CoAutomate Logo" />
+      CoAutomate
+    </div>
+    <div class="navbar-right">
+      <button id="theme-toggle-btn" class="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle theme">
+        🌙
+      </button>
+      <div class="navbar-user">
+        <div class="navbar-user-avatar" id="nav-user-initials">--</div>
+        <span class="navbar-user-name" id="nav-user-name">Loading…</span>
+      </div>
+      <button id="logout-btn" class="btn btn-ghost btn-sm">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Tabs -->
+    <div class="tabs" data-tab-group="main">
+      <button class="tab-btn active" data-tab="overview" data-tab-group="main">Overview</button>
+      <button class="tab-btn" data-tab="profile" data-tab-group="main">My Profile</button>
+      <button class="tab-btn" data-tab="reports" data-tab-group="main">Reports</button>
+      <button class="tab-btn" data-tab="settings" data-tab-group="main">Settings</button>
+    </div>
+
+    <!-- ── Tab: Overview ── -->
+    <div data-tab-content="overview" data-tab-group="main" class="tab-content active">
+
+      <!-- Next Scheduled Run -->
+      <div class="next-run-card">
+        <div class="next-run-icon">🗓️</div>
+        <div class="next-run-info">
+          <div class="next-run-label">Next Automatic Report</div>
+          <div class="next-run-date" id="next-run-date">Loading…</div>
+          <div class="next-run-sub" id="next-run-sub"></div>
+        </div>
+        <button id="generate-btn" class="btn btn-primary">⚡ Generate Now</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📄</div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Total Reports</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✉️</div>
+          <div class="stat-value" id="stat-sent">0</div>
+          <div class="stat-label">Emails Sent</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-value" id="stat-month">0</div>
+          <div class="stat-label">This Month</div>
+        </div>
+      </div>
+
+      <!-- Recent Reports Preview -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title"><span class="icon">📋</span> Recent Reports</span>
+          <button class="btn btn-ghost btn-sm"
+                  onclick="document.querySelector('[data-tab=reports]').click()">
+            View All →
+          </button>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div class="reports-table-wrap">
+            <table class="reports-table">
+              <thead>
+                <tr>
+                  <th>Period</th>
+                  <th>Half</th>
+                  <th>Generated</th>
+                  <th>Email</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reports-tbody">
+                <tr><td colspan="5">
+                  <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-title">No reports yet</div>
+                    <div class="empty-state-desc">Click "Generate Now" to create your first report.</div>
+                  </div>
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /overview -->
+
+    <!-- ── Tab: Profile ── -->
+    <div data-tab-content="profile" data-tab-group="main" class="tab-content">
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;">
+
+        <!-- Left: Personal Info -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="icon">👤</span> Personal Information</span>
+          </div>
+          <div class="panel-body">
+            <form id="profile-form">
+              <div class="profile-grid">
+                <div class="form-group" style="grid-column:1/-1;">
+                  <label for="pf-fullname" class="form-label">Full Name</label>
+                  <input id="pf-fullname" type="text" class="form-input"
+                         placeholder="Full name as it appears on CoA" required />
+                </div>
+                <div class="form-group">
+                  <label for="pf-dept" class="form-label">Department</label>
+                  <input id="pf-dept" type="text" class="form-input" placeholder="e.g. CPE" required />
+                </div>
+                <div class="form-group">
+                  <label for="pf-college" class="form-label">College</label>
+                  <input id="pf-college" type="text" class="form-input" placeholder="e.g. CEA" required />
+                </div>
+                <div class="form-group">
+                  <label for="pf-load" class="form-label">Total Teaching Load (units)</label>
+                  <input id="pf-load" type="number" class="form-input" placeholder="24" />
+                </div>
+                <div class="form-group">
+                  <label for="pf-term" class="form-label">Term / School Year</label>
+                  <input id="pf-term" type="text" class="form-input" placeholder="AY 2526 1ST SEM" />
+                </div>
+              </div>
+              <div style="margin-top:20px;">
+                <button id="save-profile-btn" type="submit" class="btn btn-primary">
+                  💾 Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Right: E-Signature -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><span class="icon">✍️</span> E-Signature</span>
+          </div>
+          <div class="panel-body">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+              Upload a <strong style="color:var(--text-primary);">transparent PNG</strong> of your signature.
+              It will be placed over cell A31 on your generated CoA reports.
+            </p>
+            <label id="sig-zone" class="signature-zone" for="sig-input">
+              <input type="file" id="sig-input" accept=".png,.jpg,.jpeg" />
+              <div id="sig-placeholder">
+                <div class="signature-placeholder">✍️</div>
+                <div class="signature-hint">Click or drag & drop to upload</div>
+                <div class="signature-hint" style="margin-top:4px;font-size:11px;">PNG recommended (transparent background)</div>
+              </div>
+              <img id="sig-preview" class="signature-preview" style="display:none;" alt="Your e-signature" />
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /profile -->
+
+    <!-- ── Tab: Reports ── -->
+    <div data-tab-content="reports" data-tab-group="main" class="tab-content">
+      <div class="section-header">
+        <div>
+          <div class="section-title">All Reports</div>
+          <div class="section-subtitle">Your complete history of generated CoA documents</div>
+        </div>
+        <button class="btn btn-primary"
+                onclick="document.getElementById('generate-btn').click()">
+          ⚡ Generate Now
+        </button>
+      </div>
+      <div class="panel">
+        <div class="panel-body" style="padding:0;">
+          <div class="reports-table-wrap">
+            <table class="reports-table">
+              <thead>
+                <tr>
+                  <th>Month / Year</th>
+                  <th>Period</th>
+                  <th>Generated On</th>
+                  <th>Email Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reports-tbody-full">
+                <tr><td colspan="5">
+                  <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-title">No reports yet</div>
+                    <div class="empty-state-desc">Click "Generate Now" to create your first report.</div>
+                  </div>
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div><!-- /reports -->
+
+    <!-- ── Tab: Settings ── -->
+    <div data-tab-content="settings" data-tab-group="main" class="tab-content">
+
+      <div class="panel" style="max-width:640px;">
+        <div class="panel-header">
+          <span class="panel-title"><span class="icon">✉️</span> Email (SMTP) Settings</span>
+          <span style="font-size:12px;color:var(--text-secondary);display:inline-flex;align-items:center;">
+            <span id="smtp-status-dot" class="smtp-status-dot offline"></span>
+            <span id="smtp-status-label">Not configured</span>
+          </span>
+        </div>
+        <div class="panel-body">
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
+            Configure your SMTP server to enable automatic email delivery of CoA reports.
+            For Gmail, use App Passwords with
+            <strong style="color:var(--text-primary);">smtp.gmail.com:587</strong>.
+          </p>
+          <form id="smtp-form">
+            <div class="smtp-grid">
+              <div class="form-group">
+                <label for="smtp-host" class="form-label">SMTP Host</label>
+                <input id="smtp-host" type="text" class="form-input"
+                       placeholder="smtp.gmail.com" value="smtp.gmail.com" />
+              </div>
+              <div class="form-group">
+                <label for="smtp-port" class="form-label">SMTP Port</label>
+                <input id="smtp-port" type="number" class="form-input"
+                       placeholder="587" value="587" />
+              </div>
+              <div class="form-group">
+                <label for="smtp-user" class="form-label">Username (Email)</label>
+                <input id="smtp-user" type="email" class="form-input"
+                       placeholder="youremail@gmail.com" />
+              </div>
+              <div class="form-group">
+                <label for="smtp-pass" class="form-label">App Password</label>
+                <input id="smtp-pass" type="password" class="form-input"
+                       placeholder="Gmail App Password" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="smtp-name" class="form-label">Sender Display Name</label>
+              <input id="smtp-name" type="text" class="form-input"
+                     placeholder="CoAutomate System" value="CoAutomate System" />
+            </div>
+            <div style="margin-top:16px;">
+              <button id="save-smtp-btn" type="submit" class="btn btn-primary">
+                💾 Save Settings
+              </button>
+            </div>
+          </form>
+
+          <div class="divider"></div>
+          <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:16px;">
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:8px;">
+              📌 Gmail Setup Guide
+            </div>
+            <ol style="font-size:12px;color:var(--text-secondary);padding-left:18px;line-height:2;">
+              <li>Go to your Google Account → Security.</li>
+              <li>Enable <strong style="color:var(--text-primary);">2-Step Verification</strong>.</li>
+              <li>Search for <strong style="color:var(--text-primary);">App Passwords</strong> and generate one.</li>
+              <li>Use the 16-character app password above (not your regular Gmail password).</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /settings -->
+
+  </main>
+</div><!-- /dashboard-page -->
+
+<!-- ════════════════════════════════════
+     Delete Confirmation Modal
+════════════════════════════════════ -->
+<div id="delete-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
+  <div class="modal-box">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title" id="modal-title-text">Delete Report?</div>
+    <div class="modal-desc">
+      This will permanently remove the report file and its record. This action cannot be undone.
+    </div>
+    <div class="modal-actions">
+      <button id="modal-cancel-btn" class="btn btn-ghost">Cancel</button>
+      <button id="modal-confirm-btn" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

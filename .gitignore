@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Databases
+backend/coautomate.db
+backend/coautomate.db-journal
+
+# Uploads & generated files
+backend/uploads/signatures/*
+!backend/uploads/signatures/.gitkeep
+backend/reports/*
+!backend/reports/.gitkeep
+backend/smtp_config.json
+*.xlsx
+!backend/templates_excel/*.xlsx
+
+# OS files
+.DS_Store
+Thumbs.db
