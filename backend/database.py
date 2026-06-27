@@ -1,16 +1,27 @@
 """
 database.py - SQLAlchemy setup and models
+
+Supports both SQLite (local dev) and PostgreSQL (production).
+Set the DATABASE_URL environment variable to a PostgreSQL URL in production.
+If DATABASE_URL is not set, falls back to local SQLite.
 """
+import os
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./coautomate.db"
+# Use DATABASE_URL env var in production (Render + Supabase), fallback to SQLite locally
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./coautomate.db")
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+# Supabase / Render provides 'postgres://' but SQLAlchemy requires 'postgresql://'
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# SQLite needs check_same_thread=False; PostgreSQL does not need it
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

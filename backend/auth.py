@@ -3,6 +3,7 @@ auth.py - JWT authentication and password hashing utilities
 """
 from datetime import datetime, timedelta
 from typing import Optional
+import os
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
@@ -11,9 +12,12 @@ from sqlalchemy.orm import Session
 from database import get_db, User
 
 # --- Config ---
-SECRET_KEY = "coautomate-super-secret-key-change-in-production-2026"
+# In production, set a strong SECRET_KEY environment variable on your hosting platform.
+# Locally, the fallback default is used automatically.
+SECRET_KEY = os.environ.get("SECRET_KEY", "coautomate-super-secret-key-change-in-production-2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
