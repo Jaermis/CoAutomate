@@ -196,18 +196,28 @@ async def upload_signature(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    import base64
     allowed_exts = {".png", ".jpg", ".jpeg"}
     suffix = Path(file.filename).suffix.lower()
     if suffix not in allowed_exts:
         raise HTTPException(status_code=400, detail="Only PNG/JPG images are allowed.")
 
+    content = await file.read()
+    if len(content) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Signature file is too large (max 2MB).")
+
+    # 1. Save to local uploads dir for fast file streaming
     filename = f"sig_{current_user.id}{suffix}"
     dest = UPLOADS_DIR / filename
-
     with open(str(dest), "wb") as f:
-        shutil.copyfileobj(file.file, f)
+        f.write(content)
+
+    # 2. Save permanently into PostgreSQL as Base64 data URL
+    mime = "image/png" if suffix == ".png" else "image/jpeg"
+    b64_str = f"data:{mime};base64," + base64.b64encode(content).decode("utf-8")
 
     current_user.signature_filename = filename
+    current_user.signature_data = b64_str
     db.commit()
     db.refresh(current_user)
     return current_user
@@ -215,12 +225,28 @@ async def upload_signature(
 
 @app.get("/api/me/signature")
 def get_signature(current_user: User = Depends(get_current_user)):
-    if not current_user.signature_filename:
-        raise HTTPException(status_code=404, detail="No signature uploaded.")
-    sig_path = UPLOADS_DIR / current_user.signature_filename
-    if not sig_path.exists():
-        raise HTTPException(status_code=404, detail="Signature file not found.")
-    return FileResponse(str(sig_path))
+    import base64
+    # First try serving from local disk if present
+    if current_user.signature_filename:
+        sig_path = UPLOADS_DIR / current_user.signature_filename
+        if sig_path.exists():
+            return FileResponse(str(sig_path))
+
+    # If local disk was cleared after redeploy/restart, serve from PostgreSQL base64
+    if current_user.signature_data:
+        try:
+            prefix, data = current_user.signature_data.split(";base64,")
+            mime = prefix.replace("data:", "")
+            img_bytes = base64.b64decode(data)
+            # Recreate file on disk so excel_service has it
+            if current_user.signature_filename:
+                dest = UPLOADS_DIR / current_user.signature_filename
+                dest.write_bytes(img_bytes)
+            return Response(content=img_bytes, media_type=mime)
+        except Exception:
+            pass
+
+    raise HTTPException(status_code=404, detail="No signature uploaded.")
 
 
 # -------------------------

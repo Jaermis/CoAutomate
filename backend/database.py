@@ -38,6 +38,7 @@ class User(Base):
     total_teaching_load = Column(String(50), nullable=False)# Cell I37
     term_school_year = Column(String(100), nullable=False)  # Cell J6
     signature_filename = Column(String(512), nullable=True) # e-signature file
+    signature_data = Column(Text, nullable=True)            # Permanent Base64 signature image in PostgreSQL
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

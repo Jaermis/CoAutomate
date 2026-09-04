@@ -241,24 +241,41 @@ def generate_coa_report(user, period_info: dict):
     sheet2_xml = _update_numeric_cell(sheet2_xml, "I37", load_str)
 
     # ── Handle e-signature image ───────────────────────────────
+    sig_bytes = None
+    sig_ext = ".png"
+
     if user.signature_filename:
         sig_path = UPLOADS_DIR / user.signature_filename
         if sig_path.exists():
             sig_bytes = sig_path.read_bytes()
-            ext = Path(user.signature_filename).suffix.lower()
-            media_key = 'xl/media/image1' + ext
-            if media_key in all_files:
-                info, _ = all_files[media_key]
-                all_files[media_key] = (info, sig_bytes)
+            sig_ext = Path(user.signature_filename).suffix.lower()
+
+    # Fallback to persistent PostgreSQL Base64 if file on ephemeral disk was cleared
+    if not sig_bytes and getattr(user, "signature_data", None):
+        try:
+            import base64
+            prefix, b64_data = user.signature_data.split(";base64,")
+            sig_bytes = base64.b64decode(b64_data)
+            if "jpeg" in prefix or "jpg" in prefix:
+                sig_ext = ".jpg"
             else:
-                import zipfile as zf
-                new_info = zf.ZipInfo(media_key)
-                new_info.compress_type = zipfile.ZIP_DEFLATED
-                all_files[media_key] = (new_info, sig_bytes)
+                sig_ext = ".png"
+            # Recreate on disk for caching
+            if user.signature_filename:
+                (UPLOADS_DIR / user.signature_filename).write_bytes(sig_bytes)
+        except Exception:
+            sig_bytes = None
+
+    if sig_bytes:
+        media_key = 'xl/media/image1' + sig_ext
+        if media_key in all_files:
+            info, _ = all_files[media_key]
+            all_files[media_key] = (info, sig_bytes)
         else:
-            if 'xl/drawings/drawing1.xml' in all_files:
-                info, _ = all_files['xl/drawings/drawing1.xml']
-                all_files['xl/drawings/drawing1.xml'] = (info, _build_empty_drawing_xml())
+            import zipfile as zf
+            new_info = zf.ZipInfo(media_key)
+            new_info.compress_type = zipfile.ZIP_DEFLATED
+            all_files[media_key] = (new_info, sig_bytes)
     else:
         if 'xl/drawings/drawing1.xml' in all_files:
             info, _ = all_files['xl/drawings/drawing1.xml']
