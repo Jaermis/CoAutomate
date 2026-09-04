@@ -1,0 +1,23 @@
+databases:
+  - name: coautomate-db
+    databaseName: coautomate
+    user: coautomate_user
+    plan: free
+    region: singapore
+
+services:
+  - type: web
+    name: coautomate
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: coautomate-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
