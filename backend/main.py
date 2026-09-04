@@ -62,7 +62,15 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # -------------------------
 @app.on_event("startup")
 def startup_event():
-    create_tables()
+    import logging
+    logger = logging.getLogger("uvicorn")
+    try:
+        create_tables()
+        logger.info("[STARTUP] Database tables verified/created successfully.")
+    except Exception as e:
+        import traceback
+        logger.error(f"[STARTUP ERROR] Database connection or table creation failed: {e}")
+        traceback.print_exc()
 
 
 # -------------------------
@@ -124,24 +132,32 @@ class GenerateRequest(BaseModel):
 # -------------------------
 @app.post("/api/auth/register", status_code=201)
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == user_data.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered.")
+    try:
+        existing = db.query(User).filter(User.email == user_data.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered.")
 
-    new_user = User(
-        email=user_data.email,
-        password_hash=get_password_hash(user_data.password),
-        full_name=user_data.full_name,
-        department=user_data.department,
-        college=user_data.college,
-        total_teaching_load=user_data.total_teaching_load,
-        term_school_year=user_data.term_school_year,
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    token = create_access_token({"sub": new_user.email})
-    return {"access_token": token, "token_type": "bearer", "user": UserResponse.from_orm(new_user)}
+        new_user = User(
+            email=user_data.email,
+            password_hash=get_password_hash(user_data.password),
+            full_name=user_data.full_name,
+            department=user_data.department,
+            college=user_data.college,
+            total_teaching_load=user_data.total_teaching_load,
+            term_school_year=user_data.term_school_year,
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        token = create_access_token({"sub": new_user.email})
+        return {"access_token": token, "token_type": "bearer", "user": UserResponse.from_orm(new_user)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
 
 @app.post("/api/auth/login")
