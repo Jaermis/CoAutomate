@@ -67,3 +67,13 @@ def get_db():
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
+    # Safe auto-migration: ensure newly added columns exist in already-created tables
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            # Check if signature_data column exists on users table
+            conn.execute(text("ALTER TABLE users ADD COLUMN signature_data TEXT;"))
+            conn.commit()
+    except Exception:
+        # Column already exists or table doesn't support ALTER TABLE in this syntax
+        pass
