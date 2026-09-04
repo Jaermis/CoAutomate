@@ -3,422 +3,492 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="CoAutomate – Automated Certificate of Attendance Report Generator for Faculty." />
-  <title>CoAutomate – Automated CoA Report System</title>
+  <meta name="description" content="CoAutomate — Certificate of Attendance generator and archival system for academic faculty." />
+  <title>CoAutomate — Certificate of Attendance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="/static/img/logo.png" />
   <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
 
-<!-- ════════════════════════════════════
-     Toast Container
-════════════════════════════════════ -->
+<!-- Toast Notification Container -->
 <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
 <!-- ════════════════════════════════════
-     LOGIN PAGE
+     1. AUTHENTICATION: LOGIN
 ════════════════════════════════════ -->
 <div id="login-page" class="page">
-  <div class="auth-wrapper">
-    <div class="auth-card">
-      <div class="auth-logo">
-        <img class="auth-logo-icon" src="/static/img/logo.png" alt="CoAutomate Logo" />
-        <div class="auth-logo-text">CoAutomate</div>
+  <div class="auth-viewport">
+    <div class="auth-panel">
+      <div class="auth-header">
+        <div class="auth-brand-lockup">
+          <img class="header-logo-icon" src="/static/img/logo.png" alt="CoAutomate" />
+          <span class="auth-brand-name">CoAutomate</span>
+        </div>
+        <h1 class="auth-heading">Sign In</h1>
+        <p class="auth-subheading">Access your faculty attendance records and generator.</p>
       </div>
-      <h1 class="auth-title">Welcome back</h1>
-      <p class="auth-subtitle">Sign in to your account to manage your CoA reports.</p>
 
       <form id="login-form" novalidate>
         <div class="form-group">
           <label for="login-email" class="form-label">Email Address</label>
           <input id="login-email" type="email" class="form-input"
-                 placeholder="you@university.edu.ph" required autocomplete="email" />
+                 placeholder="name@university.edu.ph" required autocomplete="email" />
         </div>
         <div class="form-group">
           <label for="login-password" class="form-label">Password</label>
           <input id="login-password" type="password" class="form-input"
-                 placeholder="Your password" required autocomplete="current-password" />
+                 placeholder="••••••••••••" required autocomplete="current-password" />
         </div>
-        <button id="login-btn" type="submit" class="btn btn-primary btn-block" style="margin-top:8px;">
-          Sign In
+        <button id="login-btn" type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:16px;">
+          Authenticate
         </button>
       </form>
 
-      <div class="auth-switch">
-        Don't have an account?
-        <a href="#" id="go-register">Create one →</a>
+      <div class="auth-footer">
+        Need an account? <a href="#" id="go-register">Register as faculty</a>
       </div>
     </div>
   </div>
 </div>
 
 <!-- ════════════════════════════════════
-     REGISTER PAGE
+     2. AUTHENTICATION: REGISTER
 ════════════════════════════════════ -->
 <div id="register-page" class="page">
-  <div class="auth-wrapper">
-    <div class="auth-card" style="max-width:560px;">
-      <div class="auth-logo">
-        <img class="auth-logo-icon" src="/static/img/logo.png" alt="CoAutomate Logo" />
-        <div class="auth-logo-text">CoAutomate</div>
+  <div class="auth-viewport">
+    <div class="auth-panel auth-panel-wide">
+      <div class="auth-header">
+        <div class="auth-brand-lockup">
+          <img class="header-logo-icon" src="/static/img/logo.png" alt="CoAutomate" />
+          <span class="auth-brand-name">CoAutomate</span>
+        </div>
+        <h1 class="auth-heading">Faculty Registration</h1>
+        <p class="auth-subheading">Set up your permanent credentials and academic profile.</p>
       </div>
-      <h1 class="auth-title">Create your account</h1>
-      <p class="auth-subtitle">Enter your faculty details to get started.</p>
 
       <form id="register-form" novalidate>
         <div class="form-group">
           <label for="reg-fullname" class="form-label">Full Name</label>
           <input id="reg-fullname" type="text" class="form-input"
-                 placeholder="Juan Dela Cruz" required />
+                 placeholder="e.g. Maria Clara Santos" required />
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="reg-dept" class="form-label">Department</label>
+            <label for="reg-dept" class="form-label">Department Code</label>
             <input id="reg-dept" type="text" class="form-input"
                    placeholder="CPE" required />
           </div>
           <div class="form-group">
-            <label for="reg-college" class="form-label">College</label>
+            <label for="reg-college" class="form-label">College Code</label>
             <input id="reg-college" type="text" class="form-input"
                    placeholder="CEA" required />
           </div>
         </div>
+
         <div class="form-row">
           <div class="form-group">
-            <label for="reg-load" class="form-label">Total Teaching Load (units)</label>
+            <label for="reg-load" class="form-label">Teaching Load (units)</label>
             <input id="reg-load" type="number" class="form-input"
                    placeholder="24" min="1" required />
           </div>
+          
           <div class="form-group">
-            <label for="reg-term" class="form-label">Term / School Year</label>
-            <input id="reg-term" type="text" class="form-input"
-                   placeholder="AY 2526 1ST SEM" required />
+            <label class="form-label">Term &amp; School Year</label>
+            <div class="term-sy-container">
+              <span class="permanent-prefix">AY</span>
+              <input id="reg-sy" type="text" class="form-input"
+                     placeholder="2526" required title="e.g. 2526 or 2025-2026" />
+              <select id="reg-term-select" class="form-input" required>
+                <option value="1ST SEM">1ST SEM</option>
+                <option value="2ND SEM">2ND SEM</option>
+                <option value="MIDYEAR">MIDYEAR</option>
+              </select>
+            </div>
           </div>
         </div>
-        <div class="divider"></div>
+
         <div class="form-group">
-          <label for="reg-email" class="form-label">Email Address</label>
+          <label for="reg-email" class="form-label">University Email</label>
           <input id="reg-email" type="email" class="form-input"
-                 placeholder="you@university.edu.ph" required />
+                 placeholder="name@university.edu.ph" required />
         </div>
         <div class="form-group">
           <label for="reg-password" class="form-label">Password</label>
           <input id="reg-password" type="password" class="form-input"
-                 placeholder="Choose a strong password" required minlength="6" />
+                 placeholder="Minimum 6 characters" required minlength="6" />
         </div>
-        <button id="register-btn" type="submit" class="btn btn-primary btn-block" style="margin-top:8px;">
-          Create Account
+        <button id="register-btn" type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:16px;">
+          Create Profile
         </button>
       </form>
 
-      <div class="auth-switch">
-        Already have an account?
-        <a href="#" id="go-login">Sign in →</a>
+      <div class="auth-footer">
+        Existing account? <a href="#" id="go-login">Return to sign in</a>
       </div>
     </div>
   </div>
 </div>
 
 <!-- ════════════════════════════════════
-     DASHBOARD PAGE
+     3. APPLICATION WORKSPACE
 ════════════════════════════════════ -->
-<div id="dashboard-page" class="page">
+<div id="app-page" class="page">
 
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <img class="navbar-brand-icon" src="/static/img/logo.png" alt="CoAutomate Logo" />
-      CoAutomate
-    </div>
-    <div class="navbar-right">
-      <button id="theme-toggle-btn" class="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle theme">
-        🌙
-      </button>
-      <div class="navbar-user">
-        <div class="navbar-user-avatar" id="nav-user-initials">--</div>
-        <span class="navbar-user-name" id="nav-user-name">Loading…</span>
+  <!-- Primary System Bar -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <img class="header-logo-icon" src="/static/img/logo.png" alt="CoAutomate Logo" />
+        <span class="header-title">CoAutomate</span>
+        <span class="header-version">v2.1</span>
       </div>
-      <button id="logout-btn" class="btn btn-ghost btn-sm">Sign Out</button>
+
+      <div class="header-controls">
+        <button id="theme-toggle-btn" class="theme-switch-btn" title="Toggle color scheme" aria-label="Toggle theme">
+          <svg class="lucide-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+        </button>
+        <div class="user-identity-chip">
+          <span class="user-initials" id="nav-user-initials">--</span>
+          <span class="user-display-name" id="nav-user-name">Loading…</span>
+        </div>
+        <button id="logout-btn" class="btn btn-secondary btn-sm">
+          <svg class="lucide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Sign Out
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Editorial Subnavigation -->
+  <nav class="subnav-bar">
+    <div class="subnav-inner" data-tab-group="main">
+      <button class="editorial-tab active" data-tab="generate" data-tab-group="main">
+        <span class="tab-idx">01</span> Generator
+      </button>
+      <button class="editorial-tab" data-tab="history" data-tab-group="main">
+        <span class="tab-idx">02</span> History
+      </button>
+      <button class="editorial-tab" data-tab="profile" data-tab-group="main">
+        <span class="tab-idx">03</span> Profile &amp; Signature
+      </button>
     </div>
   </nav>
 
-  <!-- Main Content -->
-  <main class="main-content">
+  <!-- Main Content Shell -->
+  <main class="editorial-shell">
 
-    <!-- Tabs -->
-    <div class="tabs" data-tab-group="main">
-      <button class="tab-btn active" data-tab="overview" data-tab-group="main">Overview</button>
-      <button class="tab-btn" data-tab="profile" data-tab-group="main">My Profile</button>
-      <button class="tab-btn" data-tab="reports" data-tab-group="main">Reports</button>
-      <button class="tab-btn" data-tab="settings" data-tab-group="main">Settings</button>
-    </div>
-
-    <!-- ── Tab: Overview ── -->
-    <div data-tab-content="overview" data-tab-group="main" class="tab-content active">
-
-      <!-- Next Scheduled Run -->
-      <div class="next-run-card">
-        <div class="next-run-icon">🗓️</div>
-        <div class="next-run-info">
-          <div class="next-run-label">Next Automatic Report</div>
-          <div class="next-run-date" id="next-run-date">Loading…</div>
-          <div class="next-run-sub" id="next-run-sub"></div>
-        </div>
-        <button id="generate-btn" class="btn btn-primary">⚡ Generate Now</button>
+    <!-- ─────────────────────────────────────────
+         TAB 01: GENERATOR
+         ───────────────────────────────────────── -->
+    <div data-tab-content="generate" data-tab-group="main" class="tab-content active">
+      
+      <div class="display-header">
+        <span class="kicker">
+          <svg class="lucide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          Document Processing
+        </span>
+        <h1 class="display-title">Generate Certificate of Attendance</h1>
+        <p class="display-desc">
+          Produces a validated, formatted .xlsx document mapped to official university templates with your academic profile and e-signature.
+        </p>
       </div>
 
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon">📄</div>
-          <div class="stat-value" id="stat-total">0</div>
-          <div class="stat-label">Total Reports</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">✉️</div>
-          <div class="stat-value" id="stat-sent">0</div>
-          <div class="stat-label">Emails Sent</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">📅</div>
-          <div class="stat-value" id="stat-month">0</div>
-          <div class="stat-label">This Month</div>
-        </div>
-      </div>
-
-      <!-- Recent Reports Preview -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title"><span class="icon">📋</span> Recent Reports</span>
-          <button class="btn btn-ghost btn-sm"
-                  onclick="document.querySelector('[data-tab=reports]').click()">
-            View All →
-          </button>
-        </div>
-        <div class="panel-body" style="padding:0;">
-          <div class="reports-table-wrap">
-            <table class="reports-table">
-              <thead>
-                <tr>
-                  <th>Period</th>
-                  <th>Half</th>
-                  <th>Generated</th>
-                  <th>Email</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="reports-tbody">
-                <tr><td colspan="5">
-                  <div class="empty-state">
-                    <div class="empty-state-icon">📭</div>
-                    <div class="empty-state-title">No reports yet</div>
-                    <div class="empty-state-desc">Click "Generate Now" to create your first report.</div>
-                  </div>
-                </td></tr>
-              </tbody>
-            </table>
+      <div class="studio-grid">
+        
+        <!-- Primary Form Area -->
+        <section class="editorial-card">
+          <div class="editorial-card-header">
+            <span class="editorial-card-title">
+              <svg class="lucide-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" y2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg>
+              Generation Parameters
+            </span>
           </div>
-        </div>
-      </div>
-
-    </div><!-- /overview -->
-
-    <!-- ── Tab: Profile ── -->
-    <div data-tab-content="profile" data-tab-group="main" class="tab-content">
-      <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;">
-
-        <!-- Left: Personal Info -->
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title"><span class="icon">👤</span> Personal Information</span>
-          </div>
-          <div class="panel-body">
-            <form id="profile-form">
-              <div class="profile-grid">
-                <div class="form-group" style="grid-column:1/-1;">
-                  <label for="pf-fullname" class="form-label">Full Name</label>
-                  <input id="pf-fullname" type="text" class="form-input"
-                         placeholder="Full name as it appears on CoA" required />
+          <div class="editorial-card-body">
+            <form id="generator-form" novalidate>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="gen-month" class="form-label">Billing Month</label>
+                  <select id="gen-month" class="form-input" required>
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                  </select>
                 </div>
                 <div class="form-group">
+                  <label for="gen-year" class="form-label">Year</label>
+                  <input id="gen-year" type="number" class="form-input"
+                         placeholder="2026" min="2020" max="2099" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Pay Period Window</label>
+                <div class="period-segmented-wrap">
+                  <label class="period-option">
+                    <input type="radio" name="gen-period" value="1-15" checked />
+                    <div class="period-option-inner">
+                      <span class="period-option-title">First Half</span>
+                      <span class="period-option-caption">Days 1 through 15</span>
+                    </div>
+                  </label>
+                  <label class="period-option">
+                    <input type="radio" name="gen-period" value="16-end" />
+                    <div class="period-option-inner">
+                      <span class="period-option-title">Second Half</span>
+                      <span class="period-option-caption" id="period-end-label">Days 16 through End</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="gen-date" class="form-label">Date Accomplished (Cell J5)</label>
+                <input id="gen-date" type="date" class="form-input" required />
+              </div>
+
+              <div style="margin-top: 32px;">
+                <button id="generate-btn" type="submit" class="btn btn-primary btn-block btn-lg">
+                  <svg class="lucide-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>
+                  Generate &amp; Download Spreadsheet
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </section>
+
+        <!-- Sidebar: Spec Verification -->
+        <aside class="editorial-card">
+          <div class="editorial-card-header">
+            <span class="editorial-card-title">
+              <svg class="lucide-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              Template Mapping Data
+            </span>
+            <button class="btn btn-ghost btn-sm"
+                    onclick="document.querySelector('[data-tab=profile]').click()">
+              Edit Profile
+            </button>
+          </div>
+          <div class="editorial-card-body">
+            
+            <div class="sig-status-frame">
+              <img id="preview-sig-img" class="sig-status-img" style="display:none;" alt="Faculty E-Signature" />
+              <div id="preview-sig-placeholder" class="sig-missing-badge">
+                <svg class="lucide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                No signature asset uploaded
+              </div>
+            </div>
+
+            <div class="spec-list">
+              <div class="spec-item">
+                <span class="spec-label">Faculty</span>
+                <span class="spec-val" id="prev-name">—</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Dept</span>
+                <span class="spec-val" id="prev-dept">—</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">College</span>
+                <span class="spec-val" id="prev-college">—</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Teaching Load</span>
+                <span class="spec-val" id="prev-load">—</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Academic Term</span>
+                <span class="spec-val" id="prev-term">—</span>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         TAB 02: HISTORY
+         ───────────────────────────────────────── -->
+    <div data-tab-content="history" data-tab-group="main" class="tab-content">
+      
+      <div class="display-header">
+        <span class="kicker">
+          <svg class="lucide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>
+          Archive &amp; Audit
+        </span>
+        <h1 class="display-title">Generated CoA Archive</h1>
+        <p class="display-desc" id="history-subtitle">
+          Record of all previously compiled and exported documents.
+        </p>
+      </div>
+
+      <div class="editorial-card">
+        <div class="table-container">
+          <table class="editorial-table">
+            <thead>
+              <tr>
+                <th>Period</th>
+                <th>Span</th>
+                <th>Created</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr>
+                <td colspan="4">
+                  <div class="empty-notice">
+                    <p class="empty-notice-title">No archived reports</p>
+                    <p class="empty-notice-sub">Generated documents will appear here for audit and re-download.</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         TAB 03: PROFILE & SIGNATURE
+         ───────────────────────────────────────── -->
+    <div data-tab-content="profile" data-tab-group="main" class="tab-content">
+      
+      <div class="display-header">
+        <span class="kicker">
+          <svg class="lucide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Faculty Identity
+        </span>
+        <h1 class="display-title">Profile &amp; E-Signature</h1>
+        <p class="display-desc">
+          Parameters saved here are permanently linked to your faculty identity and injected into generated reports.
+        </p>
+      </div>
+
+      <div class="profile-studio-grid">
+        
+        <!-- Left: Text fields -->
+        <section class="editorial-card">
+          <div class="editorial-card-header">
+            <span class="editorial-card-title">Academic Details</span>
+          </div>
+          <div class="editorial-card-body">
+            <form id="profile-form">
+              <div class="form-group">
+                <label for="pf-fullname" class="form-label">Full Name</label>
+                <input id="pf-fullname" type="text" class="form-input"
+                       placeholder="Juan Dela Cruz" required />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
                   <label for="pf-dept" class="form-label">Department</label>
-                  <input id="pf-dept" type="text" class="form-input" placeholder="e.g. CPE" required />
+                  <input id="pf-dept" type="text" class="form-input" placeholder="CPE" required />
                 </div>
                 <div class="form-group">
                   <label for="pf-college" class="form-label">College</label>
-                  <input id="pf-college" type="text" class="form-input" placeholder="e.g. CEA" required />
-                </div>
-                <div class="form-group">
-                  <label for="pf-load" class="form-label">Total Teaching Load (units)</label>
-                  <input id="pf-load" type="number" class="form-input" placeholder="24" />
-                </div>
-                <div class="form-group">
-                  <label for="pf-term" class="form-label">Term / School Year</label>
-                  <input id="pf-term" type="text" class="form-input" placeholder="AY 2526 1ST SEM" />
+                  <input id="pf-college" type="text" class="form-input" placeholder="CEA" required />
                 </div>
               </div>
-              <div style="margin-top:20px;">
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="pf-load" class="form-label">Teaching Load (Units)</label>
+                  <input id="pf-load" type="number" class="form-input" placeholder="24" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Term &amp; School Year</label>
+                  <div class="term-sy-container">
+                    <span class="permanent-prefix">AY</span>
+                    <input id="pf-sy" type="text" class="form-input"
+                           placeholder="2526" required title="e.g. 2526 or 2025-2026" />
+                    <select id="pf-term-select" class="form-input" required>
+                      <option value="1ST SEM">1ST SEM</option>
+                      <option value="2ND SEM">2ND SEM</option>
+                      <option value="MIDYEAR">MIDYEAR</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top:24px;">
                 <button id="save-profile-btn" type="submit" class="btn btn-primary">
-                  💾 Save Changes
+                  <svg class="lucide-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                  Save Changes
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </section>
 
-        <!-- Right: E-Signature -->
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title"><span class="icon">✍️</span> E-Signature</span>
+        <!-- Right: Signature Upload -->
+        <aside class="editorial-card">
+          <div class="editorial-card-header">
+            <span class="editorial-card-title">
+              <svg class="lucide-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+              E-Signature Asset
+            </span>
           </div>
-          <div class="panel-body">
-            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
-              Upload a <strong style="color:var(--text-primary);">transparent PNG</strong> of your signature.
-              It will be placed over cell A31 on your generated CoA reports.
+          <div class="editorial-card-body signature-card-body">
+            <p style="font-size:0.86rem; color:var(--text-secondary); line-height:1.5;">
+              Upload a transparent PNG image. The asset is stamped directly onto cell A31 of the CoA spreadsheet.
             </p>
-            <label id="sig-zone" class="signature-zone" for="sig-input">
+
+            <label id="sig-zone" class="upload-dropzone" for="sig-input">
               <input type="file" id="sig-input" accept=".png,.jpg,.jpeg" />
+              <svg class="lucide-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--logo-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg>
               <div id="sig-placeholder">
-                <div class="signature-placeholder">✍️</div>
-                <div class="signature-hint">Click or drag & drop to upload</div>
-                <div class="signature-hint" style="margin-top:4px;font-size:11px;">PNG recommended (transparent background)</div>
+                <div class="dropzone-label-main">Click or drop image file here</div>
+                <div class="dropzone-label-sub">Recommended: Transparent PNG (max 500KB)</div>
               </div>
-              <img id="sig-preview" class="signature-preview" style="display:none;" alt="Your e-signature" />
             </label>
+
+            <!-- Active Asset Preview Box -->
+            <div id="sig-active-asset-box" class="sig-asset-box" style="display:none;">
+              <div class="sig-asset-header">
+                <span>Current Uploaded Signature</span>
+                <span style="color:var(--logo-teal);">Active</span>
+              </div>
+              <div class="sig-asset-canvas">
+                <img id="sig-preview" class="uploaded-preview-img" alt="Uploaded Signature Preview" />
+              </div>
+            </div>
+
           </div>
-        </div>
+        </aside>
 
       </div>
-    </div><!-- /profile -->
-
-    <!-- ── Tab: Reports ── -->
-    <div data-tab-content="reports" data-tab-group="main" class="tab-content">
-      <div class="section-header">
-        <div>
-          <div class="section-title">All Reports</div>
-          <div class="section-subtitle">Your complete history of generated CoA documents</div>
-        </div>
-        <button class="btn btn-primary"
-                onclick="document.getElementById('generate-btn').click()">
-          ⚡ Generate Now
-        </button>
-      </div>
-      <div class="panel">
-        <div class="panel-body" style="padding:0;">
-          <div class="reports-table-wrap">
-            <table class="reports-table">
-              <thead>
-                <tr>
-                  <th>Month / Year</th>
-                  <th>Period</th>
-                  <th>Generated On</th>
-                  <th>Email Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="reports-tbody-full">
-                <tr><td colspan="5">
-                  <div class="empty-state">
-                    <div class="empty-state-icon">📭</div>
-                    <div class="empty-state-title">No reports yet</div>
-                    <div class="empty-state-desc">Click "Generate Now" to create your first report.</div>
-                  </div>
-                </td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div><!-- /reports -->
-
-    <!-- ── Tab: Settings ── -->
-    <div data-tab-content="settings" data-tab-group="main" class="tab-content">
-
-      <div class="panel" style="max-width:640px;">
-        <div class="panel-header">
-          <span class="panel-title"><span class="icon">✉️</span> Email (SMTP) Settings</span>
-          <span style="font-size:12px;color:var(--text-secondary);display:inline-flex;align-items:center;">
-            <span id="smtp-status-dot" class="smtp-status-dot offline"></span>
-            <span id="smtp-status-label">Not configured</span>
-          </span>
-        </div>
-        <div class="panel-body">
-          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
-            Configure your SMTP server to enable automatic email delivery of CoA reports.
-            For Gmail, use App Passwords with
-            <strong style="color:var(--text-primary);">smtp.gmail.com:587</strong>.
-          </p>
-          <form id="smtp-form">
-            <div class="smtp-grid">
-              <div class="form-group">
-                <label for="smtp-host" class="form-label">SMTP Host</label>
-                <input id="smtp-host" type="text" class="form-input"
-                       placeholder="smtp.gmail.com" value="smtp.gmail.com" />
-              </div>
-              <div class="form-group">
-                <label for="smtp-port" class="form-label">SMTP Port</label>
-                <input id="smtp-port" type="number" class="form-input"
-                       placeholder="587" value="587" />
-              </div>
-              <div class="form-group">
-                <label for="smtp-user" class="form-label">Username (Email)</label>
-                <input id="smtp-user" type="email" class="form-input"
-                       placeholder="youremail@gmail.com" />
-              </div>
-              <div class="form-group">
-                <label for="smtp-pass" class="form-label">App Password</label>
-                <input id="smtp-pass" type="password" class="form-input"
-                       placeholder="Gmail App Password" />
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="smtp-name" class="form-label">Sender Display Name</label>
-              <input id="smtp-name" type="text" class="form-input"
-                     placeholder="CoAutomate System" value="CoAutomate System" />
-            </div>
-            <div style="margin-top:16px;">
-              <button id="save-smtp-btn" type="submit" class="btn btn-primary">
-                💾 Save Settings
-              </button>
-            </div>
-          </form>
-
-          <div class="divider"></div>
-          <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:16px;">
-            <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:8px;">
-              📌 Gmail Setup Guide
-            </div>
-            <ol style="font-size:12px;color:var(--text-secondary);padding-left:18px;line-height:2;">
-              <li>Go to your Google Account → Security.</li>
-              <li>Enable <strong style="color:var(--text-primary);">2-Step Verification</strong>.</li>
-              <li>Search for <strong style="color:var(--text-primary);">App Passwords</strong> and generate one.</li>
-              <li>Use the 16-character app password above (not your regular Gmail password).</li>
-            </ol>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /settings -->
+    </div>
 
   </main>
-</div><!-- /dashboard-page -->
+</div>
 
 <!-- ════════════════════════════════════
-     Delete Confirmation Modal
+     4. DELETE CONFIRMATION MODAL
 ════════════════════════════════════ -->
 <div id="delete-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
-  <div class="modal-box">
-    <div class="modal-icon">🗑️</div>
-    <div class="modal-title" id="modal-title-text">Delete Report?</div>
-    <div class="modal-desc">
-      This will permanently remove the report file and its record. This action cannot be undone.
-    </div>
-    <div class="modal-actions">
-      <button id="modal-cancel-btn" class="btn btn-ghost">Cancel</button>
-      <button id="modal-confirm-btn" class="btn btn-danger">Delete</button>
+  <div class="modal-dialog">
+    <h2 class="modal-headline" id="modal-title-text">Confirm Deletion</h2>
+    <p class="modal-copy">
+      Are you sure you want to delete this CoA report file? This action permanently removes the spreadsheet from storage.
+    </p>
+    <div class="modal-btn-row">
+      <button id="modal-cancel-btn" class="btn btn-secondary">Cancel</button>
+      <button id="modal-confirm-btn" class="btn btn-danger">Delete File</button>
     </div>
   </div>
 </div>

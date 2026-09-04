@@ -1,6 +1,18 @@
-/* ===== app.js — CoAutomate Frontend Logic ===== */
+/* ===== app.js — CoAutomate v2.1 Frontend Logic ===== */
 
 const API = '';  // Same origin; backend serves the frontend
+
+// ─── SVG Icon System (Zero Emojis) ───────────────────────────
+const Icons = {
+  success: `<svg class="lucide-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>`,
+  error:   `<svg class="lucide-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`,
+  info:    `<svg class="lucide-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+  moon:    `<svg class="lucide-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>`,
+  sun:     `<svg class="lucide-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`,
+  save:    `<svg class="lucide-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>`,
+  download:`<svg class="lucide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>`,
+  trash:   `<svg class="lucide-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+};
 
 // ─── Token Management ───────────────────────────────────────
 const Auth = {
@@ -25,17 +37,16 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
-// ─── Toast Notifications ────────────────────────────────────
+// ─── Toast Notifications (Restrained Design) ────────────────
 function toast(message, type = 'info', duration = 4000) {
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
   const container = document.getElementById('toast-container');
   const el = document.createElement('div');
   el.className = `toast ${type}`;
-  el.innerHTML = `<span>${icons[type]}</span><span>${message}</span>`;
+  el.innerHTML = `<span>${Icons[type] || Icons.info}</span><span>${message}</span>`;
   container.appendChild(el);
   setTimeout(() => {
     el.classList.add('leaving');
-    setTimeout(() => el.remove(), 350);
+    setTimeout(() => el.remove(), 250);
   }, duration);
 }
 
@@ -46,10 +57,10 @@ function showPage(pageId) {
   if (target) target.classList.add('active');
 }
 
-function showDashboard() {
+function showApp() {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('dashboard-page').classList.add('active');
-  loadDashboard();
+  document.getElementById('app-page').classList.add('active');
+  loadApp();
 }
 
 // ─── Tab Navigation ─────────────────────────────────────────
@@ -70,14 +81,46 @@ function initTabs() {
   });
 }
 
-// ─── Auth ────────────────────────────────────────────────────
+// ─── Term & School Year Parser/Formatter Helpers ─────────────
+function parseTermSchoolYear(raw) {
+  let sy = '2526';
+  let term = '1ST SEM';
+  if (!raw) return { sy, term };
+
+  // Common pattern: "AY 2526 1ST SEM" or "AY 2025-2026 2ND SEM" or "2526 1ST SEM"
+  let clean = raw.trim();
+  if (clean.toUpperCase().startsWith('AY')) {
+    clean = clean.substring(2).trim();
+  }
+
+  if (clean.includes('MIDYEAR')) {
+    term = 'MIDYEAR';
+    sy = clean.replace('MIDYEAR', '').trim();
+  } else if (clean.includes('2ND SEM')) {
+    term = '2ND SEM';
+    sy = clean.replace('2ND SEM', '').trim();
+  } else if (clean.includes('1ST SEM')) {
+    term = '1ST SEM';
+    sy = clean.replace('1ST SEM', '').trim();
+  } else {
+    sy = clean;
+  }
+  return { sy, term };
+}
+
+function formatTermSchoolYear(sy, term) {
+  const cleanSy = (sy || '').trim().replace(/^AY\s*/i, '');
+  return `AY ${cleanSy} ${term}`.trim();
+}
+
+// ─── Auth Handlers ───────────────────────────────────────────
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const email    = document.getElementById('login-email').value;
   const password = document.getElementById('login-password').value;
   const btn      = document.getElementById('login-btn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="loader"></span> Signing in…';
+  btn.innerHTML = '<span class="loader"></span> Authenticating…';
   try {
     const form = new URLSearchParams({ username: email, password });
     const res  = await fetch('/api/auth/login', {
@@ -89,13 +132,13 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     if (!res.ok) throw new Error(data.detail || 'Login failed');
     Auth.setToken(data.access_token);
     Auth.setUser(data.user);
-    toast('Welcome back, ' + data.user.full_name.split(' ')[0] + '!', 'success');
-    showDashboard();
+    toast('Authenticated as ' + data.user.full_name.split(' ')[0], 'success');
+    showApp();
   } catch (err) {
     toast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = 'Sign In';
+    btn.innerHTML = 'Authenticate';
   }
 });
 
@@ -103,8 +146,12 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
   e.preventDefault();
   const btn = document.getElementById('register-btn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="loader"></span> Creating account…';
+  btn.innerHTML = '<span class="loader"></span> Creating profile…';
   try {
+    const syVal   = document.getElementById('reg-sy').value;
+    const termVal = document.getElementById('reg-term-select').value;
+    const termSchoolYear = formatTermSchoolYear(syVal, termVal);
+
     const payload = {
       email:               document.getElementById('reg-email').value,
       password:            document.getElementById('reg-password').value,
@@ -112,20 +159,20 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
       department:          document.getElementById('reg-dept').value,
       college:             document.getElementById('reg-college').value,
       total_teaching_load: document.getElementById('reg-load').value,
-      term_school_year:    document.getElementById('reg-term').value,
+      term_school_year:    termSchoolYear,
     };
     const data = await apiFetch('/api/auth/register', {
       method: 'POST', body: JSON.stringify(payload),
     });
     Auth.setToken(data.access_token);
     Auth.setUser(data.user);
-    toast('Account created! Welcome, ' + data.user.full_name.split(' ')[0] + '!', 'success');
-    showDashboard();
+    toast('Profile registered successfully', 'success');
+    showApp();
   } catch (err) {
     toast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = 'Create Account';
+    btn.innerHTML = 'Create Profile';
   }
 });
 
@@ -140,24 +187,25 @@ document.getElementById('go-login')?.addEventListener('click', (e) => {
 document.getElementById('logout-btn')?.addEventListener('click', () => {
   Auth.clear();
   showPage('login-page');
-  toast('Signed out successfully.', 'info');
+  toast('Signed out.', 'info');
 });
 
-// ─── Dashboard ───────────────────────────────────────────────
-async function loadDashboard() {
+// ─── App Load ────────────────────────────────────────────────
+async function loadApp() {
   try {
     const user = await apiFetch('/api/me');
     Auth.setUser(user);
-    renderUserInfo(user);
-
+    renderNavUser(user);
+    renderProfileForm(user);
+    renderPreviewCard(user);
+    if (user.signature_filename) {
+      loadSignaturePreview();
+    }
     const reports = await apiFetch('/api/reports');
-    renderReportsTable(reports);
-    renderStats(reports);
-
-    const smtpStatus = await apiFetch('/api/settings/smtp-status');
-    renderSmtpStatus(smtpStatus);
+    renderHistoryTable(reports);
+    updateHistorySubtitle(reports.length);
   } catch (err) {
-    toast('Error loading dashboard: ' + err.message, 'error');
+    toast('Session error: ' + err.message, 'error');
     if (err.message.includes('401') || err.message.includes('credentials')) {
       Auth.clear();
       showPage('login-page');
@@ -165,24 +213,27 @@ async function loadDashboard() {
   }
 }
 
-function renderUserInfo(user) {
+// ─── Nav User ───────────────────────────────────────────────
+function renderNavUser(user) {
   const initials = user.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   document.getElementById('nav-user-name').textContent = user.full_name;
   document.getElementById('nav-user-initials').textContent = initials;
-
-  // Populate profile form
-  document.getElementById('pf-fullname').value = user.full_name;
-  document.getElementById('pf-dept').value     = user.department;
-  document.getElementById('pf-college').value  = user.college;
-  document.getElementById('pf-load').value     = user.total_teaching_load;
-  document.getElementById('pf-term').value     = user.term_school_year;
-
-  // Load signature preview (must go through authenticated fetch)
-  if (user.signature_filename) {
-    loadSignaturePreview();
-  }
 }
 
+// ─── Profile Preview Card ────────────────────────────────────
+function renderPreviewCard(user) {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val || '—';
+  };
+  set('prev-name',    user.full_name);
+  set('prev-dept',    user.department);
+  set('prev-college', user.college);
+  set('prev-load',    user.total_teaching_load ? user.total_teaching_load + ' units' : '');
+  set('prev-term',    user.term_school_year);
+}
+
+// ─── Signature Preview (Fixed Overflow Layout) ───────────────
 async function loadSignaturePreview() {
   try {
     const token = Auth.getToken();
@@ -192,143 +243,77 @@ async function loadSignaturePreview() {
     if (!res.ok) return;
     const blob = await res.blob();
     const url  = URL.createObjectURL(blob);
+
+    // Profile tab active asset box
+    const activeBox = document.getElementById('sig-active-asset-box');
     const preview = document.getElementById('sig-preview');
-    if (preview._blobUrl) URL.revokeObjectURL(preview._blobUrl);
-    preview._blobUrl  = url;
-    preview.src       = url;
-    preview.style.display = 'block';
-    document.getElementById('sig-placeholder').style.display = 'none';
+    if (preview) {
+      if (preview._blobUrl) URL.revokeObjectURL(preview._blobUrl);
+      preview._blobUrl  = url;
+      preview.src       = url;
+      preview.style.display = 'block';
+    }
+    if (activeBox) {
+      activeBox.style.display = 'flex';
+    }
+
+    // Generator tab preview card
+    const previewImg = document.getElementById('preview-sig-img');
+    const previewPh  = document.getElementById('preview-sig-placeholder');
+    if (previewImg) {
+      previewImg.src = url;
+      previewImg.style.display = 'block';
+    }
+    if (previewPh) previewPh.style.display = 'none';
   } catch (_) { /* no signature yet */ }
 }
 
-function renderStats(reports) {
-  const total = reports.length;
-  const sent  = reports.filter(r => r.email_sent).length;
-  const thisMonth = new Date().toLocaleString('default', { month: 'long' });
-  const thisMonthCount = reports.filter(r => r.month === thisMonth).length;
+// ─── Profile Form Render & Submit ────────────────────────────
+function renderProfileForm(user) {
+  document.getElementById('pf-fullname').value = user.full_name;
+  document.getElementById('pf-dept').value     = user.department;
+  document.getElementById('pf-college').value  = user.college;
+  document.getElementById('pf-load').value     = user.total_teaching_load;
 
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-sent').textContent = sent;
-  document.getElementById('stat-month').textContent = thisMonthCount;
-
-  // Next run calculation
-  const today = new Date();
-  let nextRun;
-  if (today.getDate() < 16) {
-    nextRun = new Date(today.getFullYear(), today.getMonth(), 16);
-  } else {
-    nextRun = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-  }
-  const daysLeft = Math.ceil((nextRun - today) / (1000 * 60 * 60 * 24));
-  document.getElementById('next-run-date').textContent =
-    nextRun.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  document.getElementById('next-run-sub').textContent =
-    daysLeft === 0 ? 'Today!' : `In ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+  const parsed = parseTermSchoolYear(user.term_school_year);
+  const pfSy = document.getElementById('pf-sy');
+  const pfTerm = document.getElementById('pf-term-select');
+  if (pfSy) pfSy.value = parsed.sy;
+  if (pfTerm) pfTerm.value = parsed.term;
 }
 
-// Shared HTML builder for a single report row
-function buildReportRow(r, showDelete = false) {
-  const date = r.created_at
-    ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : '—';
-  const emailBadge = r.email_sent
-    ? '<span class="badge badge-success">✉ Sent</span>'
-    : '<span class="badge badge-muted">Not sent</span>';
-  const emailBtn = !r.email_sent
-    ? `<button class="btn btn-ghost btn-sm" onclick="resendEmail(${r.id})">✉ Email</button>`
-    : '';
-  const deleteBtn = showDelete
-    ? `<button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="deleteReport(${r.id})" title="Delete report">🗑 Delete</button>`
-    : '';
-  return `
-    <tr id="report-row-${r.id}">
-      <td class="td-main">${r.month} ${r.year}</td>
-      <td>${r.period}</td>
-      <td>${date}</td>
-      <td>${emailBadge}</td>
-      <td class="td-actions">
-        <button class="btn btn-secondary btn-sm" onclick="downloadReport(${r.id})">⬇ Download</button>
-        ${emailBtn}
-        ${deleteBtn}
-      </td>
-    </tr>`;
-}
-
-const EMPTY_ROW = (colspan) => `
-  <tr><td colspan="${colspan}">
-    <div class="empty-state">
-      <img class="empty-state-icon" src="/static/img/logo.png" style="width: 48px; height: 48px; object-fit: contain; margin: 0 auto; opacity: 0.6;" alt="No reports" />
-      <div class="empty-state-title">No reports yet</div>
-      <div class="empty-state-desc">Click "Generate Now" to create your first CoA report.</div>
-    </div>
-  </td></tr>`;
-
-function renderReportsTable(reports) {
-  // Overview tab (recent 5, no delete button)
-  const overview = document.getElementById('reports-tbody');
-  if (overview) {
-    if (!reports.length) {
-      overview.innerHTML = EMPTY_ROW(5);
-    } else {
-      overview.innerHTML = reports.slice(0, 5).map(r => buildReportRow(r, false)).join('');
-    }
-  }
-
-  // Reports tab (full list, with delete button)
-  const full = document.getElementById('reports-tbody-full');
-  if (full) {
-    if (!reports.length) {
-      full.innerHTML = EMPTY_ROW(5);
-    } else {
-      full.innerHTML = reports.map(r => buildReportRow(r, true)).join('');
-    }
-  }
-}
-
-function renderSmtpStatus(status) {
-  const dot = document.getElementById('smtp-status-dot');
-  const label = document.getElementById('smtp-status-label');
-  if (status.configured) {
-    dot.className = 'smtp-status-dot online';
-    label.textContent = 'Connected (' + status.smtp_username + ')';
-  } else {
-    dot.className = 'smtp-status-dot offline';
-    label.textContent = 'Not configured';
-  }
-  if (status.smtp_host) document.getElementById('smtp-host').value = status.smtp_host;
-  if (status.smtp_port) document.getElementById('smtp-port').value = status.smtp_port;
-  if (status.smtp_username) document.getElementById('smtp-user').value = status.smtp_username;
-  if (status.smtp_password) document.getElementById('smtp-pass').value = status.smtp_password;
-  if (status.smtp_from_name) document.getElementById('smtp-name').value = status.smtp_from_name;
-}
-
-// ─── Profile Save ────────────────────────────────────────────
 document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('save-profile-btn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="loader"></span>';
+  btn.innerHTML = '<span class="loader"></span> Saving…';
   try {
+    const syVal   = document.getElementById('pf-sy').value;
+    const termVal = document.getElementById('pf-term-select').value;
+    const combinedTermSY = formatTermSchoolYear(syVal, termVal);
+
     const payload = {
       full_name:           document.getElementById('pf-fullname').value,
       department:          document.getElementById('pf-dept').value,
       college:             document.getElementById('pf-college').value,
       total_teaching_load: document.getElementById('pf-load').value,
-      term_school_year:    document.getElementById('pf-term').value,
+      term_school_year:    combinedTermSY,
     };
     const user = await apiFetch('/api/me', { method: 'PATCH', body: JSON.stringify(payload) });
     Auth.setUser(user);
-    renderUserInfo(user);
-    toast('Profile updated successfully!', 'success');
+    renderNavUser(user);
+    renderProfileForm(user);
+    renderPreviewCard(user);
+    toast('Faculty profile updated', 'success');
   } catch (err) {
-    toast('Failed to save profile: ' + err.message, 'error');
+    toast('Save error: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '💾 Save Changes';
+    btn.innerHTML = `${Icons.save} Save Changes`;
   }
 });
 
-// ─── Signature Upload ────────────────────────────────────────
+// ─── Signature Upload Handler ────────────────────────────────
 document.getElementById('sig-input')?.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -338,9 +323,9 @@ document.getElementById('sig-input')?.addEventListener('change', async (e) => {
     const user = await apiFetch('/api/me/signature', { method: 'POST', body: formData, headers: {} });
     Auth.setUser(user);
     await loadSignaturePreview();
-    toast('E-signature uploaded!', 'success');
+    toast('Signature image uploaded', 'success');
   } catch (err) {
-    toast('Failed to upload signature: ' + err.message, 'error');
+    toast('Upload failed: ' + err.message, 'error');
   }
 });
 
@@ -360,34 +345,146 @@ sigZone?.addEventListener('drop', (e) => {
   }
 });
 
-// ─── Generate Report ─────────────────────────────────────────
-document.getElementById('generate-btn')?.addEventListener('click', async () => {
+// ─── Generator Form Setup ────────────────────────────────────
+(function initGeneratorDefaults() {
+  const today = new Date();
+  const monthSel = document.getElementById('gen-month');
+  const yearInp  = document.getElementById('gen-year');
+  const dateInp  = document.getElementById('gen-date');
+
+  if (monthSel) monthSel.value = today.getMonth() + 1; // 1-indexed
+  if (yearInp)  yearInp.value  = today.getFullYear();
+  if (dateInp)  dateInp.value  = today.toISOString().slice(0, 10);
+
+  updatePeriodEndLabel();
+})();
+
+function updatePeriodEndLabel() {
+  const month = parseInt(document.getElementById('gen-month')?.value || 0);
+  const year  = parseInt(document.getElementById('gen-year')?.value  || new Date().getFullYear());
+  const label = document.getElementById('period-end-label');
+  if (!label || !month || !year) return;
+
+  const lastDay = new Date(year, month, 0).getDate();
+  label.textContent = `Days 16 through ${lastDay}`;
+}
+
+document.getElementById('gen-month')?.addEventListener('change', updatePeriodEndLabel);
+document.getElementById('gen-year')?.addEventListener('input', updatePeriodEndLabel);
+
+// ─── Generate & Download ─────────────────────────────────────
+document.getElementById('generator-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
   const btn = document.getElementById('generate-btn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="loader"></span> Generating…';
+  btn.innerHTML = '<span class="loader"></span> Generating Spreadsheet…';
+
   try {
-    const res = await apiFetch('/api/reports/generate', { method: 'POST' });
-    toast('Report generated: ' + res.report.month + ' ' + res.report.year + ' (' + res.report.period + ')', 'success');
+    const month  = parseInt(document.getElementById('gen-month').value);
+    const year   = parseInt(document.getElementById('gen-year').value);
+    const period = document.querySelector('input[name="gen-period"]:checked')?.value || '1-15';
+    const dateAcc = document.getElementById('gen-date').value;
+
+    if (!dateAcc) throw new Error('Please specify a Date Accomplished.');
+
+    const payload = { month, year, period, date_accomplished: dateAcc };
+
+    const token = Auth.getToken();
+    const res = await fetch('/api/reports/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+
+    const cd = res.headers.get('content-disposition') || '';
+    const fnMatch = cd.match(/filename="(.+?)"/);
+    const xFilename = res.headers.get('X-Filename');
+    const filename = fnMatch ? fnMatch[1] : (xFilename || 'CoA_report.xlsx');
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    toast(`Downloaded: ${filename}`, 'success', 5000);
+
     const reports = await apiFetch('/api/reports');
-    renderReportsTable(reports);
-    renderStats(reports);
+    renderHistoryTable(reports);
+    updateHistorySubtitle(reports.length);
+
   } catch (err) {
     toast('Generation failed: ' + err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '⚡ Generate Now';
+    btn.innerHTML = `${Icons.download} Generate &amp; Download Spreadsheet`;
   }
 });
+
+// ─── History Table ───────────────────────────────────────────
+function buildHistoryRow(r) {
+  const genDate = r.created_at
+    ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '—';
+  return `
+    <tr id="report-row-${r.id}">
+      <td class="td-bold">${r.month} ${r.year}</td>
+      <td class="td-mono">${r.period}</td>
+      <td class="td-mono">${genDate}</td>
+      <td class="td-actions">
+        <button class="btn btn-secondary btn-sm" onclick="downloadReport(${r.id})">
+          ${Icons.download} Download
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteReport(${r.id})" title="Delete report" style="margin-left:6px;">
+          ${Icons.trash} Delete
+        </button>
+      </td>
+    </tr>`;
+}
+
+const HISTORY_EMPTY = `
+  <tr><td colspan="4">
+    <div class="empty-notice">
+      <p class="empty-notice-title">No archived reports</p>
+      <p class="empty-notice-sub">Generated documents will appear here for audit and re-download.</p>
+    </div>
+  </td></tr>`;
+
+function renderHistoryTable(reports) {
+  const tbody = document.getElementById('history-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = reports.length
+    ? reports.map(buildHistoryRow).join('')
+    : HISTORY_EMPTY;
+}
+
+function updateHistorySubtitle(count) {
+  const el = document.getElementById('history-subtitle');
+  if (!el) return;
+  el.textContent = count === 0
+    ? 'Record of all previously compiled and exported documents.'
+    : `${count} document${count !== 1 ? 's' : ''} stored in local archive.`;
+}
 
 // ─── Download Report ─────────────────────────────────────────
 async function downloadReport(reportId) {
   const token = Auth.getToken();
-  const a = document.createElement('a');
-  a.href = `/api/reports/${reportId}/download`;
-  a.setAttribute('download', '');
-  // We need to fetch with auth header
   try {
-    const res = await fetch(a.href, { headers: { 'Authorization': `Bearer ${token}` } });
+    const res = await fetch(`/api/reports/${reportId}/download`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (!res.ok) throw new Error('Download failed');
     const blob = await res.blob();
     const cd = res.headers.get('content-disposition') || '';
@@ -400,7 +497,7 @@ async function downloadReport(reportId) {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    toast('Downloading report…', 'info');
+    toast('Downloading report archive…', 'info');
   } catch (err) {
     toast('Download error: ' + err.message, 'error');
   }
@@ -419,7 +516,6 @@ const DeleteModal = {
     this._cancelBtn  = document.getElementById('modal-cancel-btn');
 
     if (!this._overlay || !this._confirmBtn || !this._cancelBtn) {
-      console.warn('DeleteModal: elements not found in DOM');
       return;
     }
 
@@ -452,14 +548,16 @@ const DeleteModal = {
       await apiFetch(`/api/reports/${id}`, { method: 'DELETE' });
       const row = document.getElementById(`report-row-${id}`);
       if (row) {
-        row.style.transition = 'opacity 0.3s';
+        row.style.transition = 'opacity 0.2s';
         row.style.opacity = '0';
-        setTimeout(() => row.remove(), 320);
+        setTimeout(() => row.remove(), 210);
       }
-      toast('Report deleted.', 'info');
-      const reports = await apiFetch('/api/reports');
-      renderReportsTable(reports);
-      renderStats(reports);
+      toast('Report deleted from archive', 'info');
+      setTimeout(async () => {
+        const reports = await apiFetch('/api/reports');
+        renderHistoryTable(reports);
+        updateHistorySubtitle(reports.length);
+      }, 250);
     } catch (err) {
       toast('Delete failed: ' + err.message, 'error');
     }
@@ -470,24 +568,10 @@ function deleteReport(reportId) {
   DeleteModal.open(reportId);
 }
 
-// ─── Resend Email ────────────────────────────────────────────
-async function resendEmail(reportId) {
-  try {
-    const res = await apiFetch(`/api/reports/${reportId}/send-email`, { method: 'POST' });
-    toast(res.message, 'success');
-    const reports = await apiFetch('/api/reports');
-    renderReportsTable(reports);
-    renderStats(reports);
-  } catch (err) {
-    toast('Email error: ' + err.message, 'error');
-  }
-}
-
 // ─── Theme Toggle ─────────────────────────────────────────────
 const Theme = {
   _html: document.documentElement,
   _btn:  null,
-  ICONS: { dark: '🌙', light: '☀️' },
 
   init() {
     this._btn = document.getElementById('theme-toggle-btn');
@@ -495,8 +579,6 @@ const Theme = {
     this._apply(saved);
     if (this._btn) {
       this._btn.addEventListener('click', () => this.toggle());
-    } else {
-      console.warn('Theme: toggle button not found');
     }
   },
 
@@ -509,46 +591,20 @@ const Theme = {
   _apply(theme) {
     this._html.setAttribute('data-theme', theme);
     if (this._btn) {
-      this._btn.textContent = theme === 'dark' ? this.ICONS.dark : this.ICONS.light;
+      this._btn.innerHTML = theme === 'dark' ? Icons.sun : Icons.moon;
       this._btn.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
     }
   },
 };
 
-// ─── SMTP Save ───────────────────────────────────────────────
-document.getElementById('smtp-form')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const btn = document.getElementById('save-smtp-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loader"></span>';
-  try {
-    const payload = {
-      smtp_host:      document.getElementById('smtp-host').value,
-      smtp_port:      parseInt(document.getElementById('smtp-port').value),
-      smtp_username:  document.getElementById('smtp-user').value,
-      smtp_password:  document.getElementById('smtp-pass').value,
-      smtp_from_name: document.getElementById('smtp-name').value,
-    };
-    await apiFetch('/api/settings/smtp', { method: 'POST', body: JSON.stringify(payload) });
-    toast('SMTP settings saved!', 'success');
-    const status = await apiFetch('/api/settings/smtp-status');
-    renderSmtpStatus(status);
-  } catch (err) {
-    toast('Failed to save SMTP: ' + err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '💾 Save Settings';
-  }
-});
-
-// ─── Startup (script is at end of <body>, DOM is ready) ───────
+// ─── Startup ─────────────────────────────────────────────────
 Theme.init();
 DeleteModal.init();
 initTabs();
 
 const _token = Auth.getToken();
 if (_token) {
-  showDashboard();
+  showApp();
 } else {
   showPage('login-page');
 }

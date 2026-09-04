@@ -1,9 +1,13 @@
 """
-main.py - FastAPI application entry point
+main.py - FastAPI application entry point (CoA Generator redesign)
+
+Removed: APScheduler, email/SMTP routes
+New: generate endpoint accepts explicit month/year/period/date_accomplished
+     and streams the .xlsx file directly in the response.
 """
 import os
 import shutil
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional, List
 
@@ -11,27 +15,25 @@ from fastapi import (
     FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Request
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from database import create_tables, get_db, User, GeneratedReport
 from auth import (
     get_password_hash, verify_password, create_access_token, get_current_user
 )
-from excel_service import generate_coa_report
-from email_service import send_coa_email
-from scheduler import start_scheduler, stop_scheduler
+from excel_service import generate_coa_report, build_period_info
 
 # -------------------------
 # App Init
 # -------------------------
 app = FastAPI(
     title="CoAutomate",
-    description="Automated CoA Report Generation System",
-    version="1.0.0",
+    description="CoA Report Generator",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -40,6 +42,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Report-Id", "X-Filename"],
 )
 
 BASE_DIR = Path(__file__).parent
@@ -53,18 +56,13 @@ REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+
 # -------------------------
 # Startup / Shutdown
 # -------------------------
 @app.on_event("startup")
 def startup_event():
     create_tables()
-    start_scheduler()
-
-
-@app.on_event("shutdown")
-def shutdown_event():
-    stop_scheduler()
 
 
 # -------------------------
@@ -108,19 +106,17 @@ class ReportResponse(BaseModel):
     month: str
     year: int
     filename: str
-    email_sent: bool
     created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
-class SmtpConfig(BaseModel):
-    smtp_host: str
-    smtp_port: int
-    smtp_username: str
-    smtp_password: str
-    smtp_from_name: str
+class GenerateRequest(BaseModel):
+    month: int               # 1–12
+    year: int                # e.g. 2026
+    period: str              # "1-15" or "16-end"
+    date_accomplished: str   # ISO date string, e.g. "2026-08-15"
 
 
 # -------------------------
@@ -265,7 +261,6 @@ def delete_report(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found.")
 
-    # Delete the file from disk if it exists
     file_path = REPORTS_DIR / str(current_user.id) / report.filename
     try:
         if file_path.exists():
@@ -279,23 +274,37 @@ def delete_report(
 
 
 @app.post("/api/reports/generate")
-def manual_generate(
+def generate_report(
+    req: GenerateRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Manually triggers a CoA generation for the current period."""
-    today = date.today()
-    # Determine trigger: if day >= 16, use 16th; else use 1st
-    if today.day >= 16:
-        trigger_date = today.replace(day=16)
-    else:
-        trigger_date = today.replace(day=1)
+    """
+    Generate a CoA report with the user's explicit inputs.
+    Saves the file to disk, logs to DB, and streams the .xlsx directly.
+    The response header X-Report-Id contains the new report's DB id.
+    """
+    # Validate month
+    if not (1 <= req.month <= 12):
+        raise HTTPException(status_code=400, detail="Month must be between 1 and 12.")
+
+    # Parse date_accomplished
+    try:
+        date_acc = date.fromisoformat(req.date_accomplished)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date_accomplished format. Use YYYY-MM-DD.")
+
+    # Validate period string
+    if req.period not in ("1-15", "16-end"):
+        raise HTTPException(status_code=400, detail="period must be '1-15' or '16-end'.")
 
     try:
-        output_path, period_info = generate_coa_report(current_user, trigger_date)
+        period_info = build_period_info(req.month, req.year, req.period, date_acc)
+        output_path, period_info = generate_coa_report(current_user, period_info)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Generation failed: {e}")
 
+    # Log to DB
     report = GeneratedReport(
         user_id=current_user.id,
         period=period_info["period"],
@@ -308,83 +317,16 @@ def manual_generate(
     db.commit()
     db.refresh(report)
 
-    return {
-        "message": "Report generated successfully.",
-        "report": ReportResponse.from_orm(report),
-    }
-
-
-@app.post("/api/reports/{report_id}/send-email")
-def resend_report_email(
-    report_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    report = db.query(GeneratedReport).filter(
-        GeneratedReport.id == report_id,
-        GeneratedReport.user_id == current_user.id,
-    ).first()
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found.")
-
-    file_path = REPORTS_DIR / str(current_user.id) / report.filename
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Report file not found on disk.")
-
-    sent = send_coa_email(
-        recipient_email=current_user.email,
-        recipient_name=current_user.full_name,
-        period_label=report.period,
-        month_name=report.month,
-        year=report.year,
-        attachment_path=file_path,
+    # Stream the file back with the report ID in a header
+    return FileResponse(
+        path=str(output_path),
+        filename=output_path.name,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "X-Report-Id": str(report.id),
+            "X-Filename": output_path.name,
+        },
     )
-    if sent:
-        report.email_sent = True
-        db.commit()
-        return {"message": "Email sent successfully."}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to send email. Check SMTP settings.")
-
-
-# -------------------------
-# SMTP Settings (per-user config stored in config)
-# -------------------------
-@app.post("/api/settings/smtp")
-def configure_smtp(config: SmtpConfig, current_user: User = Depends(get_current_user)):
-    """Update SMTP settings."""
-    from config import save_smtp_config
-    cfg = {
-        "smtp_host": config.smtp_host,
-        "smtp_port": config.smtp_port,
-        "smtp_username": config.smtp_username,
-        "smtp_password": config.smtp_password,
-        "smtp_from_name": config.smtp_from_name
-    }
-    save_smtp_config(cfg)
-    
-    # Reload email_service globals
-    import email_service
-    email_service.SMTP_HOST = config.smtp_host
-    email_service.SMTP_PORT = config.smtp_port
-    email_service.SMTP_USERNAME = config.smtp_username
-    email_service.SMTP_PASSWORD = config.smtp_password
-    email_service.SMTP_FROM_NAME = config.smtp_from_name
-    email_service.SMTP_FROM_EMAIL = config.smtp_username
-    return {"message": "SMTP settings updated."}
-
-
-@app.get("/api/settings/smtp-status")
-def smtp_status(current_user: User = Depends(get_current_user)):
-    import email_service
-    return {
-        "configured": bool(email_service.SMTP_USERNAME and email_service.SMTP_PASSWORD),
-        "smtp_host": email_service.SMTP_HOST,
-        "smtp_port": email_service.SMTP_PORT,
-        "smtp_username": email_service.SMTP_USERNAME,
-        "smtp_password": email_service.SMTP_PASSWORD,
-        "smtp_from_name": email_service.SMTP_FROM_NAME
-    }
 
 
 # -------------------------

@@ -39,25 +39,28 @@ def get_period_end_day(year: int, month: int) -> int:
     return calendar.monthrange(year, month)[1]
 
 
-def get_report_period(trigger_date: date) -> dict:
+def build_period_info(month: int, year: int, period_str: str, date_accomplished: date) -> dict:
     """
-    16th → report period 1-15 of the SAME month.
-    1st  → report period 16-end of the PREVIOUS month.
+    Build the period info dict from explicit user inputs.
+
+    Args:
+        month: 1–12
+        year: e.g. 2026
+        period_str: "1-15" or "16-end"
+        date_accomplished: the date to stamp on J5
+
+    Returns a dict compatible with generate_coa_report().
     """
-    if trigger_date.day == 16:
-        year, month = trigger_date.year, trigger_date.month
+    if period_str == "1-15":
         return {
             "period": "1-15",
             "month": month,
             "year": year,
             "month_name": MONTH_NAMES[month],
             "template": TEMPLATE_1_15,
+            "date_accomplished": date_accomplished,
         }
-    else:  # day == 1
-        if trigger_date.month == 1:
-            year, month = trigger_date.year - 1, 12
-        else:
-            year, month = trigger_date.year, trigger_date.month - 1
+    else:  # "16-end"
         end_day = get_period_end_day(year, month)
         return {
             "period": f"16-{end_day}",
@@ -65,6 +68,7 @@ def get_report_period(trigger_date: date) -> dict:
             "year": year,
             "month_name": MONTH_NAMES[month],
             "template": TEMPLATE_16_31,
+            "date_accomplished": date_accomplished,
         }
 
 
@@ -136,7 +140,7 @@ def _replace_cell_with_shared_string(sheet_xml: str, cell_ref: str, ss_index: in
     For a numeric cell that needs to become a shared-string cell.
     Replaces the entire <c ...>...</c> element, keeping the style attribute.
     """
-    pat = r'(<c r="' + re.escape(cell_ref) + r'"[^>]*)(>.*?</c>|/>)'
+    pat = r'(<c r="' + re.escape(cell_ref) + r'"[^>]*)(<>.*?</c>|/>)'
 
     def replacer(m):
         tag = m.group(1)
@@ -144,6 +148,8 @@ def _replace_cell_with_shared_string(sheet_xml: str, cell_ref: str, ss_index: in
         s_attr = ' s="%s"' % s_match.group(1) if s_match else ''
         return '<c r="%s"%s t="s"><v>%d</v></c>' % (cell_ref, s_attr, ss_index)
 
+    pat = r'(<c r="' + re.escape(cell_ref) + r'"[^>]*)(<>.*?</c>|/>)'
+    pat = r'(<c r="' + re.escape(cell_ref) + r'"[^>]*)(\>.*?</c>|/>)'
     new_xml, _ = re.subn(pat, replacer, sheet_xml, count=1, flags=re.DOTALL)
     return new_xml
 
@@ -179,23 +185,26 @@ def _build_empty_drawing_xml() -> bytes:
 # Main generation function
 # ──────────────────────────────────────────────
 
-def generate_coa_report(user, trigger_date: date = None):
+def generate_coa_report(user, period_info: dict):
     """
     Generates a CoA Excel report by surgically editing the template xlsx.
 
     All changes are made to xl/worksheets/sheet2.xml (the CoA form).
     xl/worksheets/sheet1.xml (the guidelines) is left completely untouched.
-    Only the specific shared-string entries for our 8 fields are updated;
+    Only the specific shared-string entries for our fields are updated;
     all other shared strings (including Wingdings-formatted checkbox text)
     remain byte-for-byte identical.
 
+    Args:
+        user: SQLAlchemy User instance
+        period_info: dict from build_period_info()
+
     Returns: (output_path: Path, period_info: dict)
     """
-    if trigger_date is None:
-        trigger_date = date.today()
-
-    period_info   = get_report_period(trigger_date)
     template_path = period_info["template"]
+    date_accomplished = period_info.get("date_accomplished", date.today())
+    date_str = date_accomplished.strftime("%m/%d/%Y")
+    load_str = str(user.total_teaching_load)
 
     # ── Load entire template into memory ──────────────────────
     with zipfile.ZipFile(str(template_path), 'r') as zin:
@@ -205,14 +214,8 @@ def generate_coa_report(user, trigger_date: date = None):
     sheet2_xml = all_files['xl/worksheets/sheet2.xml'][1].decode('utf-8')
     shared_xml = all_files['xl/sharedStrings.xml'][1].decode('utf-8')
 
-    # ── Build the 8 field values ───────────────────────────────
-    date_str  = trigger_date.strftime("%m/%d/%Y")
-    load_str  = str(user.total_teaching_load)
-
-    # Map: (cell_ref, new_value, is_uppercase)
-    # For shared-string cells: detect index in sheet2, update that shared string
-    # For J5 (date): convert numeric cell to shared string
-    # For I37 (load): update numeric value in place
+    # ── Build the field values ─────────────────────────────────
+    # Map: cell_ref → new_value (shared-string cells)
     shared_string_cells = {
         "B5":  user.full_name,
         "B6":  user.department,
@@ -225,10 +228,8 @@ def generate_coa_report(user, trigger_date: date = None):
     for cell_ref, new_value in shared_string_cells.items():
         ss_idx = _get_cell_ss_index(sheet2_xml, cell_ref)
         if ss_idx is not None:
-            # Update the existing shared string in place
             shared_xml = _update_shared_string(shared_xml, ss_idx, new_value)
         else:
-            # Cell doesn't exist as a shared string – add a new one and point cell to it
             shared_xml, ss_idx = _add_shared_string(shared_xml, new_value)
             sheet2_xml = _replace_cell_with_shared_string(sheet2_xml, cell_ref, ss_idx)
 
@@ -255,7 +256,6 @@ def generate_coa_report(user, trigger_date: date = None):
                 new_info.compress_type = zipfile.ZIP_DEFLATED
                 all_files[media_key] = (new_info, sig_bytes)
         else:
-            # Signature file missing → clear drawing so placeholder image is removed
             if 'xl/drawings/drawing1.xml' in all_files:
                 info, _ = all_files['xl/drawings/drawing1.xml']
                 all_files['xl/drawings/drawing1.xml'] = (info, _build_empty_drawing_xml())
@@ -265,7 +265,7 @@ def generate_coa_report(user, trigger_date: date = None):
             all_files['xl/drawings/drawing1.xml'] = (info, _build_empty_drawing_xml())
 
     # ── Write output xlsx ──────────────────────────────────────
-    safe_name  = user.full_name.replace(" ", "_").replace(".", "")
+    safe_name    = user.full_name.replace(" ", "_").replace(".", "")
     period_label = period_info["period"]
     month_name   = period_info["month_name"]
     report_year  = period_info["year"]
