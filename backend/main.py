@@ -56,6 +56,12 @@ REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+@app.get("/health")
+@app.get("/api/health")
+def health_check():
+    """Lightweight ping endpoint for uptime monitors (UptimeRobot, Cron-Job.org, etc.)"""
+    return {"status": "ok"}
+
 
 # -------------------------
 # Startup / Shutdown
