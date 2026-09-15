@@ -35,6 +35,28 @@ MONTH_NAMES = [
 # Period helpers
 # ──────────────────────────────────────────────
 
+def extract_surname(full_name: str) -> str:
+    """
+    Extracts the surname/family name from a faculty member's full name.
+    Handles middle initials, suffixes (Jr., III, PhD), and compound prefixes (Dela Cruz, Del Rosario, etc.).
+    """
+    if not full_name:
+        return "Faculty"
+    cleaned = full_name.replace(",", " ").strip()
+    parts = [p for p in cleaned.split() if p]
+    if not parts:
+        return "Faculty"
+    suffixes = {"JR", "JR.", "SR", "SR.", "II", "III", "IV", "V", "PHD", "MD", "ENG", "ENGR", "MS", "MA"}
+    while len(parts) > 1 and parts[-1].upper() in suffixes:
+        parts.pop()
+    compound_prefixes = {"DE", "DEL", "DELA", "SAN", "SANTA", "SANTO", "VAN", "VON"}
+    if len(parts) >= 3 and parts[-3].upper() == "DE" and parts[-2].upper() == "LA":
+        return f"{parts[-3]} {parts[-2]} {parts[-1]}"
+    if len(parts) >= 2 and parts[-2].upper() in compound_prefixes:
+        return f"{parts[-2]} {parts[-1]}"
+    return parts[-1]
+
+
 def get_period_end_day(year: int, month: int) -> int:
     return calendar.monthrange(year, month)[1]
 
@@ -282,12 +304,11 @@ def generate_coa_report(user, period_info: dict):
             all_files['xl/drawings/drawing1.xml'] = (info, _build_empty_drawing_xml())
 
     # ── Write output xlsx ──────────────────────────────────────
-    safe_name    = user.full_name.replace(" ", "_").replace(".", "")
-    period_label = period_info["period"]
-    month_name   = period_info["month_name"]
-    report_year  = period_info["year"]
-    filename = "CoA_%s_%s%d_%s.xlsx" % (
-        safe_name, month_name, report_year, period_label.replace('-', '_'))
+    surname = extract_surname(user.full_name)
+    month_abbr = period_info["month_name"][:3]
+    # Format period label: e.g. Aug1_15 or Aug16_31
+    period_code = f"{month_abbr}{period_info['period'].replace('-', '_')}"
+    filename = f"Certificate of Attendance CoA_{surname}_{period_code}.xlsx"
 
     output_path = REPORTS_DIR / str(user.id) / filename
     output_path.parent.mkdir(parents=True, exist_ok=True)
